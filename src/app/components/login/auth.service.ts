@@ -26,4 +26,12 @@ export class AuthService {
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.base}/login`, payload);
   }
+
+  resetPassword(payload: { email: string; newPassword: string }) {
+  return this.http.post(
+    `${this.base}/reset-password`,
+    payload
+  );
+}
+
 }

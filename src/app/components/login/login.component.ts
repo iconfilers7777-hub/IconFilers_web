@@ -1,11 +1,10 @@
-import { Component, OnInit, AfterViewInit, ElementRef, Renderer2 } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService, LoginRequest } from './auth.service';
 import { finalize } from 'rxjs/operators';
 
 // 🔥 INTERNAL DASHBOARD BASE URL
-const INTERNAL_BASE_URL = 'https://app-iconfilers.netlify.app/';
-// or use your real internal server domain (I can set it for you)
+const INTERNAL_BASE_URL = 'http://app.iconfilers.com/';
 
 @Component({
   selector: 'app-login',
@@ -13,116 +12,153 @@ const INTERNAL_BASE_URL = 'https://app-iconfilers.netlify.app/';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit, AfterViewInit {
+
   loginForm!: FormGroup;
+  forgotForm!: FormGroup;
+
   loading = false;
+  forgotLoading = false;
 
   toastVisible = false;
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
-  showVerifiedIndicator = false;
+
+  showPassword = false;
+  showForgotModal = false;
+  showForgotPassword = false;
+  showForgotConfirm = false;
 
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
-    private elRef: ElementRef,
-    private renderer: Renderer2
-  ) { }
+    private elRef: ElementRef
+  ) {}
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required]],
+      email: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(4)]],
       remember: [false]
     });
 
-    
+    this.forgotForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', Validators.required]
+    });
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => this.syncNativeInputsToForm(), 250);
+    setTimeout(() => this.syncNativeInputs(), 200);
   }
 
-  private syncNativeInputsToForm() {
-    try {
-      const emailEl = this.elRef.nativeElement.querySelector('#loginEmail') as HTMLInputElement | null;
-      const pwdEl = this.elRef.nativeElement.querySelector('#loginPassword') as HTMLInputElement | null;
+  private syncNativeInputs(): void {
+    const emailEl = this.elRef.nativeElement.querySelector('#loginEmail') as HTMLInputElement;
+    const pwdEl = this.elRef.nativeElement.querySelector('#loginPassword') as HTMLInputElement;
 
-      if (emailEl) {
-        const nativeEmail = (emailEl.value || '').toString().trim();
-        const ctrl = this.loginForm.get('email');
-        if (nativeEmail && ctrl && !ctrl.value) ctrl.setValue(nativeEmail);
-      }
-
-      if (pwdEl) {
-        const nativePwd = (pwdEl.value || '').toString().trim();
-        const ctrl = this.loginForm.get('password');
-        if (nativePwd && ctrl && !ctrl.value) ctrl.setValue(nativePwd);
-      }
-
-    } catch (e) { }
+    if (emailEl?.value) this.loginForm.get('email')?.setValue(emailEl.value.trim());
+    if (pwdEl?.value) this.loginForm.get('password')?.setValue(pwdEl.value.trim());
   }
 
-  get f() { return this.loginForm.controls; }
+  get f() {
+    return this.loginForm.controls;
+  }
 
-  submit() {
-    this.syncNativeInputsToForm();
+  togglePassword(): void {
+    this.showPassword = !this.showPassword;
+  }
 
+  /* ================= LOGIN ================= */
+
+  submit(): void {
     if (this.loginForm.invalid) {
       this.showToast('Please fill required fields correctly', 'error');
       return;
     }
 
     this.loading = true;
-    this.showVerifiedIndicator = false;
 
     const payload: LoginRequest = {
-      email: (this.f['email'].value || '').toString().trim(),
-      password: (this.f['password'].value || '').toString()
+      email: this.f['email'].value.trim(),
+      password: this.f['password'].value
     };
 
     this.auth.login(payload)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (res) => {
-          const ok = !!res && (res.success === true || !!res.token);
-          if (!ok) {
-            this.showToast("login failed", 'error');
+          if (!res?.token) {
+            this.showToast('Login failed', 'error');
             return;
           }
 
-          // Extract role (same as internal dashboard)
-          const backendRole = (res.user?.role || '').trim().toLowerCase();
+          const role = (res.user?.role || '').toLowerCase();
+          const rolePath =
+            role === 'admin' ? 'admin/dashboard' :
+            role === 'user' ? 'teams/dashboard' :
+            'client/dashboard';
 
-          let rolePath = 'client/dashboard';
+          const userEncoded = encodeURIComponent(JSON.stringify(res.user));
 
-          if (backendRole === 'admin') {
-            rolePath = 'admin/dashboard';
-          } else if (backendRole === 'user') {
-            rolePath = 'teams/dashboard';   // ✅ MUST MATCH INTERNAL
-          }
+          this.showToast('Login successful', 'success');
 
-
-          this.showToast('User verified', 'success');
-          this.showVerifiedIndicator = true;
- const userEncoded = encodeURIComponent(
-    JSON.stringify(res.user)
-  );
-
-          // 🔥 Redirect to INTERNAL DASHBOARD by role
           window.location.href =
             `${INTERNAL_BASE_URL}/${rolePath}?token=${res.token}&user=${userEncoded}`;
-
         },
         error: () => {
-          this.showToast("login failed", 'error');
+          this.showToast('Login failed', 'error');
         }
       });
   }
 
-  showToast(message: string, type: 'success' | 'error') {
+  /* ================= FORGOT PASSWORD ================= */
+
+  get passwordMismatch(): boolean {
+    const { password, confirmPassword } = this.forgotForm.value;
+    return password && confirmPassword && password !== confirmPassword;
+  }
+
+  openForgotPassword(): void {
+    this.showForgotModal = true;
+  }
+
+  closeForgotPassword(): void {
+    this.showForgotModal = false;
+    this.forgotForm.reset();
+    this.showForgotPassword = false;
+    this.showForgotConfirm = false;
+  }
+
+  submitForgotPassword(): void {
+    if (this.forgotForm.invalid || this.passwordMismatch) return;
+
+    this.forgotLoading = true;
+
+    this.auth.resetPassword({
+      email: this.forgotForm.value.email,
+      newPassword: this.forgotForm.value.password
+    }).subscribe({
+      next: () => {
+        this.showToast('Password reset successful', 'success');
+        this.closeForgotPassword();
+        this.forgotLoading = false;
+      },
+      error: () => {
+        this.showToast('Failed to reset password', 'error');
+        this.forgotLoading = false;
+      }
+    });
+  }
+
+  /* ================= TOAST ================= */
+
+  private showToast(message: string, type: 'success' | 'error'): void {
     this.toastMessage = message;
     this.toastType = type;
     this.toastVisible = true;
-    setTimeout(() => this.toastVisible = false, 3500);
+
+    setTimeout(() => {
+      this.toastVisible = false;
+    }, 3000);
   }
 }

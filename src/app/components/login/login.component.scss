@@ -174,3 +174,17 @@
   width: 100%;
   max-width: 420px;
 }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+  z-index: 5;
+  font-size: 1.1rem;
+}
+
+.password-toggle:hover {
+  color: #0d6efd;
+}

@@ -24,20 +24,52 @@
               </div>
             </div>
 
-            <div class="mb-3 form-floating">
-              <input formControlName="password" type="password" class="form-control login-glow" id="loginPassword" placeholder="Password">
-              <label for="loginPassword"><i class="bi bi-key-fill me-1"></i> Password</label>
-              <div *ngIf="f['password'].invalid && (f['password'].touched || f['password'].dirty)" class="invalid-feedback">
-                Password is required (min 6 chars).
-              </div>
-            </div>
+          <div class="mb-3 form-floating position-relative">
+  <input
+    formControlName="password"
+    [type]="showPassword ? 'text' : 'password'"
+    class="form-control login-glow pe-5"
+    id="loginPassword"
+    placeholder="Password"
+  />
+
+  <label for="loginPassword">
+    <i class="bi bi-key-fill me-1"></i> Password
+  </label>
+
+  <!-- 👁 Eye toggle icon -->
+  <span
+    class="password-toggle"
+    (click)="togglePassword()"
+    role="button"
+    tabindex="0"
+    aria-label="Toggle password visibility"
+  >
+    <i class="bi" [ngClass]="showPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+  </span>
+
+  <div
+    *ngIf="f['password'].invalid && (f['password'].touched || f['password'].dirty)"
+    class="invalid-feedback"
+  >
+    Password is required (min 6 chars).
+  </div>
+</div>
+
 
             <div class="d-flex justify-content-between align-items-center mb-2">
               <div class="form-check">
                 <input formControlName="remember" class="form-check-input" type="checkbox" id="rememberLogin">
                 <label class="form-check-label small text-muted" for="rememberLogin">Remember me</label>
               </div>
-              <a href="#" class="text-primary small fw-semibold login-link">Forgot Password?</a>
+             <a
+  href="javascript:void(0)"
+  class="text-primary small fw-semibold login-link"
+  (click)="openForgotPassword()"
+>
+  Forgot Password?
+</a>
+
             </div>
 
             <button type="submit" class="btn btn-gradient-login px-4 py-2 w-100 rounded-pill mb-2" [disabled]="loading">
@@ -84,4 +116,89 @@
       </div>
     </div>
   </div>
+
+  <!-- 🔐 FORGOT PASSWORD MODAL -->
+<div class="modal-backdrop-custom" *ngIf="showForgotModal"></div>
+
+<div class="modal fade show d-block" *ngIf="showForgotModal">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg">
+
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-shield-lock-fill me-2 text-primary"></i>
+          Reset Password
+        </h5>
+        <button type="button" class="btn-close" (click)="closeForgotPassword()"></button>
+      </div>
+
+      <div class="modal-body px-4">
+        <form [formGroup]="forgotForm">
+
+          <!-- EMAIL -->
+          <div class="form-floating mb-3">
+            <input
+              type="email"
+              class="form-control"
+              formControlName="email"
+              placeholder="Email"
+            />
+            <label>Email</label>
+          </div>
+
+          <!-- NEW PASSWORD -->
+          <div class="form-floating mb-3 position-relative">
+            <input
+              [type]="showForgotPassword ? 'text' : 'password'"
+              class="form-control pe-5"
+              formControlName="password"
+              placeholder="New Password"
+            />
+            <label>New Password</label>
+
+            <span class="password-toggle" (click)="showForgotPassword = !showForgotPassword">
+              <i class="bi" [ngClass]="showForgotPassword ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+            </span>
+          </div>
+
+          <!-- CONFIRM PASSWORD -->
+          <div class="form-floating mb-2 position-relative">
+            <input
+              [type]="showForgotConfirm ? 'text' : 'password'"
+              class="form-control pe-5"
+              formControlName="confirmPassword"
+              placeholder="Confirm Password"
+            />
+            <label>Confirm Password</label>
+
+            <span class="password-toggle" (click)="showForgotConfirm = !showForgotConfirm">
+              <i class="bi" [ngClass]="showForgotConfirm ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+            </span>
+          </div>
+
+          <!-- PASSWORD MISMATCH -->
+          <div *ngIf="passwordMismatch" class="text-danger small">
+            Passwords do not match
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer border-0 px-4 pb-4">
+        <button class="btn btn-secondary rounded-pill px-3" (click)="closeForgotPassword()">
+          Cancel
+        </button>
+        <button
+          class="btn btn-gradient-login rounded-pill px-4"
+          [disabled]="forgotForm.invalid || passwordMismatch || forgotLoading"
+          (click)="submitForgotPassword()"
+        >
+          {{ forgotLoading ? 'Resetting...' : 'Reset Password' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </section>

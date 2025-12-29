@@ -96,3 +96,17 @@
 .fs-2{
     font-size: 1.8em !important;
 }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #6c757d;
+  z-index: 5;
+  font-size: 1.1rem;
+}
+
+.password-toggle:hover {
+  color: #0d6efd;
+}
